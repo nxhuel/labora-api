@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"strconv"
+
 	"github.com/gorilla/mux"
-    "io/ioutil"
 )
 
 type Item struct {
@@ -22,9 +24,31 @@ var items = []Item {
 
 
 func getItems(w http.ResponseWriter, r *http.Request) {
+    page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+    if page < 1 {
+        page = 1
+    }
+
+    itemsPerPage, _ := strconv.Atoi(r.URL.Query().Get("itemsPerPage"))
+    if itemsPerPage < 1 {
+        itemsPerPage = 10
+    }
+
+    start := (page - 1) * itemsPerPage
+
+    end := start + itemsPerPage
+
+    if start > len(items) {
+        start = len(items)
+    }
+
+    if end > len(items) {
+        end = len(items)
+    }
+
     // Envio item en formato json
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(items)
+    json.NewEncoder(w).Encode(items[start:end])
 }
 
 func getItem(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +69,7 @@ func createItem(w http.ResponseWriter, r *http.Request) {
     json.Unmarshal(reqBody, &newItem)
 
     // Se limita el uso a 10 items maximo
-    if len(items) < 10 {
+    if len(items) < 50 {
         // Se suma uno al ID c/v que se cree un item
         newItem.ID = len(items) + 1
         items = append(items, newItem)
